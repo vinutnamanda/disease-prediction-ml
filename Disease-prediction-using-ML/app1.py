@@ -30,13 +30,13 @@ def set_bg_from_local(image_file):
         unsafe_allow_html=True
     )
 
-set_bg_from_local("data/disease-prediction.jpg")  
+set_bg_from_local("data/disease-prediction.jpg")
 
 # Connect to DB
 conn = sqlite3.connect('data/predictions_history.db', check_same_thread=False)
 cursor = conn.cursor()
 
-# Create history table with an added 'specialist' column
+# Create history table
 cursor.execute('''
     CREATE TABLE IF NOT EXISTS history (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -57,16 +57,14 @@ conn.commit()
 
 # Load merged training data
 training_data = pd.read_csv('data/Training.csv')
-symptom_descriptions = pd.read_csv('data/symptoms_description.csv')  # Adjust path if needed
+symptom_descriptions = pd.read_csv('data/symptoms_description.csv')
 symptom_desc_map = dict(zip(symptom_descriptions['Symptom'], symptom_descriptions['Description']))
 
-# Extract recommendation mapping (disease to details)
+# Extract recommendation mapping
 recommendation_map = training_data.drop_duplicates(subset='prognosis').set_index('prognosis')[['Description', 'Diet', 'Medication', 'Workout', 'Precaution', 'Specialist']]
 
 # Prepare features
-all_columns = training_data.columns.tolist()
 non_symptom_cols = ['prognosis', 'Description', 'Diet', 'Medication', 'Workout', 'Precaution', 'Specialist']
-
 symptoms = [col for col in training_data.columns if col not in non_symptom_cols]
 
 X = training_data[symptoms]
@@ -75,10 +73,8 @@ y = training_data['prognosis']
 # Load models
 with open("decision_tree.pkl", "rb") as f:
     clf_dt = pickle.load(f)
-
 with open("naive_bayes.pkl", "rb") as f:
     clf_nb = pickle.load(f)
-
 with open("label_encoder.pkl", "rb") as f:
     label_encoder = pickle.load(f)
 
@@ -136,33 +132,27 @@ if st.session_state.logged_in:
         selected_symptom = st.selectbox(f"Symptom {i+1}", [''] + symptoms, key=f"symptom_{i}")
         symptom_inputs.append(selected_symptom)
 
-        # Show description immediately after selection
         if selected_symptom:
             desc = symptom_desc_map.get(selected_symptom, "Description not available")
             st.markdown(f"<div style='margin-top: -10px; color: #444;'>📝 <strong>{selected_symptom}</strong>: {desc}</div>", unsafe_allow_html=True)
 
     selected_model = st.selectbox("Select Model", ["", "Decision Tree", "Naive Bayes"])
+
     if st.button("🚀 Predict"):
         selected_symptoms = [s for s in symptom_inputs if s]
         if selected_symptoms and selected_model:
             input_vector = [1 if s in selected_symptoms else 0 for s in symptoms]
             input_df = pd.DataFrame([input_vector], columns=symptoms)
 
-            # Model Selection
-           if selected_model == "Decision Tree":
+            if selected_model == "Decision Tree":
                 model = clf_dt
-           elif selected_model == "Naive Bayes":
+            elif selected_model == "Naive Bayes":
                 model = clf_nb
 
-            # Model Prediction and Confidence
-            # Model Prediction and Confidence
             pred = model.predict(input_df)[0]
             predicted_disease = label_encoder.inverse_transform([pred])[0]
             confidence = model.predict_proba(input_df)[0].max() * 100
 
-
-
-            # Get Recommendations
             if predicted_disease in recommendation_map.index:
                 row = recommendation_map.loc[predicted_disease]
                 description = row['Description']
@@ -182,18 +172,13 @@ if st.session_state.logged_in:
                 st.dataframe(rec_df, use_container_width=True)
 
                 st.markdown(f"### 🩻 Recommended Specialist:\n**{specialist}**")
-                
-                # Display Confidence Score
                 st.markdown(f"### 🧑‍⚕️ Confidence Score: **{confidence:.2f}%**")
 
-                # Save to DB with model used and confidence score
-                # Save to DB with model used and confidence score
                 cursor.execute('''
                     INSERT INTO history (username, symptoms, predicted_disease, confidence_score, diet, workout, medication, precaution, specialist, model, timestamp)
                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ''', (st.session_state.username, ', '.join(selected_symptoms), predicted_disease, confidence, diet, workout, medication, precaution, specialist, selected_model, datetime.now()))
                 conn.commit()
-
 
                 st.success(f"Prediction and recommendations for {predicted_disease} have been saved successfully!")
 
@@ -212,7 +197,6 @@ if st.session_state.logged_in and st.button("📜 View Prediction History"):
     if not history_df.empty:
         st.dataframe(history_df)
 
-        # Charts
         history_df['timestamp'] = pd.to_datetime(history_df['timestamp'])
 
         trend_data = history_df.groupby('predicted_disease').size().reset_index(name='count')
@@ -222,18 +206,17 @@ if st.session_state.logged_in and st.button("📜 View Prediction History"):
 
         symptom_counts = pd.Series(', '.join(history_df['symptoms']).split(', ')).value_counts().reset_index()
         symptom_counts.columns = ['Symptom', 'Count']
-        fig_symptom = px.bar(symptom_counts, x="Symptom", y="Count", color="Count", 
+        fig_symptom = px.bar(symptom_counts, x="Symptom", y="Count", color="Count",
                              title="Symptom Frequency in History", color_continuous_scale="YlOrRd")
         st.plotly_chart(fig_symptom)
-        
-        # ✅ Predicted Disease Distribution (Pie Chart)
+
         if not history_df.empty:
             disease_counts = history_df['predicted_disease'].value_counts()
             fig_disease_dist = px.pie(disease_counts, names=disease_counts.index, values=disease_counts.values,
-                                    title="Predicted Disease Distribution")
+                                      title="Predicted Disease Distribution")
             st.plotly_chart(fig_disease_dist)
     else:
         st.warning("No history available yet.")
 
-# ✅ Close connection
+# Close connection
 conn.close()
