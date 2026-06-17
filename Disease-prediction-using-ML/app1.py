@@ -75,12 +75,10 @@ y = training_data['prognosis']
 # Load models
 with open("decision_tree.pkl", "rb") as f:
     clf_dt = pickle.load(f)
-with open("random_forest.pkl", "rb") as f:
-    clf_rf = pickle.load(f)
+
 with open("naive_bayes.pkl", "rb") as f:
     clf_nb = pickle.load(f)
-with open("knn.pkl", "rb") as f:
-    clf_knn = pickle.load(f)
+
 with open("label_encoder.pkl", "rb") as f:
     label_encoder = pickle.load(f)
 
