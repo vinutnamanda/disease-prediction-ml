@@ -141,8 +141,7 @@ if st.session_state.logged_in:
             desc = symptom_desc_map.get(selected_symptom, "Description not available")
             st.markdown(f"<div style='margin-top: -10px; color: #444;'>📝 <strong>{selected_symptom}</strong>: {desc}</div>", unsafe_allow_html=True)
 
-    selected_model = st.selectbox("Select Model", ["", "Decision Tree", "Random Forest", "Naive Bayes", "KNN"])
-
+   selected_model = st.selectbox("Select Model", ["", "Decision Tree", "Naive Bayes"])
     if st.button("🚀 Predict"):
         selected_symptoms = [s for s in symptom_inputs if s]
         if selected_symptoms and selected_model:
@@ -150,14 +149,10 @@ if st.session_state.logged_in:
             input_df = pd.DataFrame([input_vector], columns=symptoms)
 
             # Model Selection
-            if selected_model == "Decision Tree":
+           if selected_model == "Decision Tree":
                 model = clf_dt
-            elif selected_model == "Random Forest":
-                model = clf_rf
-            elif selected_model == "Naive Bayes":
+           elif selected_model == "Naive Bayes":
                 model = clf_nb
-            elif selected_model == "KNN":
-                model = clf_knn
 
             # Model Prediction and Confidence
             # Model Prediction and Confidence
