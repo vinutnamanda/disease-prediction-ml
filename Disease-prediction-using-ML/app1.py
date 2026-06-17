@@ -141,7 +141,7 @@ if st.session_state.logged_in:
             desc = symptom_desc_map.get(selected_symptom, "Description not available")
             st.markdown(f"<div style='margin-top: -10px; color: #444;'>📝 <strong>{selected_symptom}</strong>: {desc}</div>", unsafe_allow_html=True)
 
-   selected_model = st.selectbox("Select Model", ["", "Decision Tree", "Naive Bayes"])
+    selected_model = st.selectbox("Select Model", ["", "Decision Tree", "Naive Bayes"])
     if st.button("🚀 Predict"):
         selected_symptoms = [s for s in symptom_inputs if s]
         if selected_symptoms and selected_model:
